@@ -260,7 +260,6 @@ model Listing {
   
   // Relations
   provider      Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  user          User          @relation("ProviderListings", fields: [providerId], references: [id])
   bookings      Booking[]
   reviews       Review[]
   availability  Availability[]
