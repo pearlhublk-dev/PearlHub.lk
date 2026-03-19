@@ -6,25 +6,34 @@ import { z } from "zod";
 
 const bookingSchema = z.object({
   listingId: z.string().uuid(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-  guests: z.number().min(1),
-  totalPrice: z.number().positive(),
+  checkIn: z.string().datetime(),
+  checkOut: z.string().datetime(),
+  adults: z.number().min(1).default(1),
+  children: z.number().min(0).default(0),
+  totalAmount: z.number().positive(),
   specialRequests: z.string().optional(),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const bookings = await prisma.booking.findMany({
       where: {
         OR: [
-          { userId: session.user.id },
-          { provider: { userId: session.user.id } },
+          { guestId: user.id },
+          { provider: { userId: user.id } },
         ],
       },
       include: {
@@ -33,21 +42,19 @@ export async function GET(request: NextRequest) {
             id: true,
             title: true,
             images: true,
-            category: true,
-            price: true,
-            location: true,
+            type: true,
+            basePrice: true,
+            address: true,
           },
         },
-        user: {
+        guest: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            name: true,
             email: true,
             phone: true,
           },
         },
-        payment: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -62,8 +69,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -77,16 +92,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
-    const startDate = new Date(validatedData.startDate);
-    const endDate = new Date(validatedData.endDate);
+    const checkIn = new Date(validatedData.checkIn);
+    const checkOut = new Date(validatedData.checkOut);
 
     const existingBooking = await prisma.booking.findFirst({
       where: {
         listingId: validatedData.listingId,
-        status: { not: "CANCELLED" },
+        status: { not: "CANCELLED_BY_GUEST" },
         AND: [
-          { startDate: { lte: endDate } },
-          { endDate: { gte: startDate } },
+          { checkIn: { lte: checkOut } },
+          { checkOut: { gte: checkIn } },
         ],
       },
     });
@@ -100,13 +115,20 @@ export async function POST(request: NextRequest) {
 
     const booking = await prisma.booking.create({
       data: {
-        ...validatedData,
-        userId: session.user.id,
+        listingId: validatedData.listingId,
+        guestId: user.id,
         providerId: listing.providerId,
+        checkIn,
+        checkOut,
+        adults: validatedData.adults,
+        children: validatedData.children,
+        basePrice: listing.basePrice,
+        serviceFee: 0,
+        taxAmount: 0,
+        totalAmount: validatedData.totalAmount,
         status: "PENDING",
-        startDate,
-        endDate,
         paymentStatus: "PENDING",
+        specialRequests: validatedData.specialRequests,
       },
       include: {
         listing: {
