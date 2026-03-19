@@ -31,10 +31,7 @@ export async function GET(_request: NextRequest) {
 
     const bookings = await prisma.booking.findMany({
       where: {
-        OR: [
-          { guestId: user.id },
-          { provider: { userId: user.id } },
-        ],
+        guestId: user.id,
       },
       include: {
         listing: {
@@ -120,6 +117,7 @@ export async function POST(request: NextRequest) {
         providerId: listing.providerId,
         checkIn,
         checkOut,
+        duration: Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)),
         adults: validatedData.adults,
         children: validatedData.children,
         basePrice: listing.basePrice,
