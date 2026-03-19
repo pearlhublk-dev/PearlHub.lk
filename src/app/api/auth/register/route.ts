@@ -31,8 +31,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
+        name: `${validatedData.firstName} ${validatedData.lastName}`,
         email: validatedData.email,
         phone: validatedData.phone,
         password: hashedPassword,
@@ -42,8 +41,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         email: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         role: true,
         createdAt: true,
       },
