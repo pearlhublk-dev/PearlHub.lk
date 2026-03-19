@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         totalAmount: validatedData.totalAmount,
         status: "PENDING",
         paymentStatus: "PENDING",
-        specialRequests: validatedData.specialRequests,
+        specialRequests: validatedData.specialRequests ?? null,
       },
       include: {
         listing: {
