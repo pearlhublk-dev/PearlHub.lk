@@ -33,7 +33,6 @@ model User {
   sessions      Session[]
   provider      Provider?
   bookings      Booking[]  @relation("GuestBookings")
-  listings      Listing[]  @relation("ProviderListings")
   reviews       Review[]
   notifications Notification[]
   messages      Message[]
