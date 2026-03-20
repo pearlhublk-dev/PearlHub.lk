@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...validatedData,
         providerId: provider.id,
-        status: "PENDING",
+        status: "PENDING_REVIEW",
         images: validatedData.images || [],
         amenities: validatedData.amenities || [],
       },
